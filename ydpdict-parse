@@ -1,0 +1,116 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+# ydpdict-anki - export irregular verbs from YDP English dictionary to anki format
+# Copyright 2010 Marcin Owsiany <marcin@owsiany.pl>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import getopt
+import re
+import sys
+from lxml import html
+
+opts, args = getopt.getopt(sys.argv[1:], "v", ["verbose"])
+verbose = False
+for o, a in opts:
+  if o in ("-v", "--verbose"):
+    verbose = True
+  else:
+    raise Exception('%s %s' % (o, a))
+
+def is_verb(*tt):
+  for t in tt:
+    if not t:
+      continue
+    if 'vb' in t or 'vt' in t or 'vi' in t:
+      return True
+  return False
+
+all_types = {}
+words = {}
+for line in open(args[0]):
+  tree = html.document_fromstring(unicode(line, 'utf-8'))
+  body = tree.find('body')
+  definition = body[0]
+#  print etree.tostring(definition, pretty_print=True)
+  def_word = definition.find('b').text.strip()
+  definition.find('b').drop_tree()
+  types = []
+  current_type = None
+  translation = None
+  for section in body.iter('p'):
+    if (len(section)
+        and section[0].tag == 'i'
+        and len(section[0])
+        and section[0][0].tag == 'span'
+        and section[0][0].get('style') == 'color: red;'):
+      current_type = section[0][0].text
+      types.append(current_type)
+      section[0][0].drop_tree()
+    if (not translation
+        and is_verb(current_type)):
+      for span in section.iter('span'):
+        if span.get('style') == 'color: green;':
+          translation = section.text_content().strip()
+          break
+  def_content = definition.text_content().strip()
+  # example def_content:
+  # thrive [θraɪv] (pt  thrived or throve) (pp  thrived)
+  all_types.update([(t, None) for t in types])
+  irregular = False
+  verb = is_verb(*types)
+  if verb:
+    if '(pt' in def_content or '(pp' in def_content or ' pt' in def_content:
+      irregular = True
+  datum = (def_content, types, irregular, translation)
+  if def_word in words:
+    words[def_word].append(datum)
+  else:
+    words[def_word] = [datum]
+
+for word, defs in sorted(words.items()):
+  for definition, types, irregular, translation in defs:
+    if not irregular:
+      continue
+    forms = []
+    clean_definition = definition.replace('(US)', '').replace('(BRIT)', '')
+    for formgroup in re.finditer(r'\((.*?)\)', clean_definition):
+      for form in formgroup.group(1).replace(',', '').split():
+        if form in [u'pt', u'pp', u'or', u'and', u'vt:', u'negative', u'conditional']:
+          continue
+        forms.append(form)
+    form_ipas = []
+    for form in forms:
+      if form in words:
+        if words[form] is defs:
+          continue
+        for variant in words[form]:
+          form_ipas.append((form, variant[0]))
+    if translation:
+      front = translation
+      back_first = word + ' ' + definition
+    else:
+      front = word
+      back_first = definition
+    print '"%s";"%s' % (front.encode('utf-8'), back_first.encode('utf-8'))
+    for ipa in form_ipas:
+      print '<br> %s: %s' % (ipa[0].encode('utf-8'), ipa[1].encode('utf-8'))
+    if verbose:
+      print '<br> %s' % types
+    print '"'
+
+if False:
+  print
+  for t in sorted(all_types.keys()):
+   print t
+
