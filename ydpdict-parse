@@ -20,11 +20,14 @@ import re
 import sys
 from lxml import html
 
-opts, args = getopt.getopt(sys.argv[1:], "v", ["verbose"])
+opts, args = getopt.getopt(sys.argv[1:], "vn", ["verbose", "no-newline"])
 verbose = False
+newline = True
 for o, a in opts:
   if o in ("-v", "--verbose"):
     verbose = True
+  elif o in ('-n', '--no-newline'):
+    newline = False
   else:
     raise Exception('%s %s' % (o, a))
 
@@ -102,12 +105,16 @@ for word, defs in sorted(words.items()):
     else:
       front = word
       back_first = definition
-    print '"%s";"%s' % (front.encode('utf-8'), back_first.encode('utf-8'))
+    out_line = ['"%s";"%s' % (front.encode('utf-8'), back_first.encode('utf-8'))]
     for ipa in form_ipas:
-      print '<br> %s: %s' % (ipa[0].encode('utf-8'), ipa[1].encode('utf-8'))
+      out_line.append('<br> %s: %s' % (ipa[0].encode('utf-8'), ipa[1].encode('utf-8')))
     if verbose:
-      print '<br> %s' % types
-    print '"'
+      out_line.append('<br> %s' % types)
+    out_line.append('"')
+    if newline:
+      print '\n'.join(out_line)
+    else:
+      print ' '.join(out_line)
 
 if False:
   print

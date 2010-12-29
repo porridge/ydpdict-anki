@@ -4,7 +4,9 @@ ydpdict-anki
 Export irregular verbs from YDP English dictionary to anki format.
 
 Just run "make" to build the C program and create "ydpdict-irregular-verbs.txt"
-that you can import into anki to study irregular verbs.
+that you can import into anki to study irregular verbs. If your version of anki
+complains about some lines missing fields, try:
+make clean && make YDPDICT_PARSE_ARGS=-n
 
 Requirements:
 -------------

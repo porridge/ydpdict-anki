@@ -19,7 +19,7 @@ CFLAGS = -g -Werror
 LDFLAGS = -lydpdict
 
 ydpdict-irregular-verbs.txt: ydpdict-parse ydpdict-dump.htmls
-	./$< ydpdict-dump.htmls > $@
+	./$< $(YDPDICT_PARSE_ARGS) ydpdict-dump.htmls > $@
 
 ydpdict-dump.htmls: ydpdict-dump $(DICT_FILES)
 	./$< $(DICT_FILES) | egrep -v '^<(.DOCTYPE html|.xml ver)' > $@
